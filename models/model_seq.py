@@ -3,14 +3,13 @@ import tensorflow as tf
 import yaml
 from attrdict import AttrDict
 
-from Utils.attention_2d_wrapper import Luong2DAttentionMechanism
+from utils.attention_2d_wrapper import Luong2DAttentionMechanism
 
-from model_sa import Model as SaModel
+from models.model_plain import Model as PlainModel
 
 model_name = 'ConvLSTM'
 
-class Model(SaModel):
-    # content straight copy from seq
+class Model(PlainModel):
     def convlstm_layer(self, config, hidden_length, input_channels,
                        memory, memory_sequence_length):
 # {{{
@@ -33,6 +32,7 @@ class Model(SaModel):
             stacked_lstm,
             attention_mechanism,
             cell_input_fn=cell_input_fn,
+            # alignment_history=True,
             output_attention=False)
 
         return attn_lstm, input_channels
@@ -44,13 +44,16 @@ class Model(SaModel):
                                                    input_channels, rnn_input, seqlen)
 
         initial_state = cell.zero_state(batch_size, dtype=tf.float32)
-        rnn_output, _ = tf.nn.dynamic_rnn(
+        rnn_output, rnn_state = tf.nn.dynamic_rnn(
                 cell,
                 rnn_input,
                 sequence_length=seqlen,
                 initial_state=initial_state,
                 time_major=False,
                 dtype=tf.float32)
+
+        self._rnn_state = rnn_state.alignments
+
         t = tf.shape(rnn_input)[1]
         rnn_output = tf.reshape(rnn_output, [-1, t, hidden_length, hidden_length, input_channels])
         return rnn_output, hidden_length, input_channels

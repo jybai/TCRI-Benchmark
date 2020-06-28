@@ -3,39 +3,28 @@ import tensorflow as tf
 import yaml
 from attrdict import AttrDict
 
-from utility import *
-from Utils.metrics import metrics_dict as md
-from Utils.metrics import streaming_consufion_matrix, cm_summary
+from utils.utility import *
+from utils.metrics import metrics_dict as md
+from utils.metrics import streaming_consufion_matrix, cm_summary
 
 model_name = 'ConvLSTM'
 
 class Model():
-    def __init__(self, training, x, seqlen, y, 
-                 config_filepath='./convlstm_config.yaml', nclass=2, bias=None):
+    def __init__(self, training, x, seqlen, y, config_filepath='./config.yaml', 
+                 bias=None):
         with open(config_filepath, 'r') as yf:
             config = yaml.load(yf)
-        # patch
-        '''
-        require_patch = 'lstm' in config and 'cells' not in config['lstm']
-        if require_patch:
-            cells = config['lstm']
-            config['lstm'] = {
-                'cells': cells,
-                'input_keep_prob': config['input_keep_prob'],
-                'output_keep_prob': config['output_keep_prob'],
-                'state_keep_prob': config['state_keep_prob'],
-            }
-        '''
-        self.nclass = nclass
+
         self.config = AttrDict(config)
         self.training = training
         self.x = x 
         self.seqlen = seqlen 
         self.y = y
+
         if bias == None:
-            self.bias = tf.ones([nclass], tf.float32)
+            self.bias = tf.ones([2], tf.float32)
         else:
-            assert(len(bias) == nclass)
+            assert(len(bias) == 2)
             self.bias = np.array(bias)
 
         self.prediction
@@ -45,15 +34,6 @@ class Model():
 
         self.define_metrics()
 
-    '''
-    def _patch_config(self):
-        if type(self.config.lstm) != list:
-            self.config.input_keep_prob = self.config.lstm.input_keep_prob
-            self.config.output_keep_prob = self.config.lstm.output_keep_prob
-            self.config.state_keep_prob = self.config.lstm.state_keep_prob
-            self.config.lstm = self.config.lstm.cells
-    '''
-
     def define_metrics(self):
 # {{{
         with tf.name_scope('metric'):
@@ -61,24 +41,16 @@ class Model():
             self.metric_op = {}
             self.summaries = []
             weights = tf.sequence_mask(self.seqlen, maxlen=tf.shape(self.y)[1])
-            if self.nclass <= 2:
-                for m in ['acc', 'f1', 'pre', 'rec', 'heidke', 'prauc']:
-                    self.metric[m], self.metric_op[m] = md[m](
-                        self.discrete_y, 
-                        self.discrete_prediction, 
-                        weights=weights)
-                    self.summaries.append(tf.summary.scalar(m, self.metric[m]))
-                self.metric['bss'], self.metric_op['bss'] = md['bss'](
-                        self.y, self.prediction, weights=weights)
-                self.summaries.append(tf.summary.scalar('bss', self.metric['bss']))
-            else:
-                self.metric['cm'], self.metric_op['cm'] = streaming_consufion_matrix(
-                    tf.reshape(self.discrete_y, [-1]), 
-                    tf.reshape(self.discrete_prediction, [-1]), 
-                    self.nclass,
-                    weights=tf.reshape(weights, [-1]))
-                self.summaries.append(tf.summary.tensor_summary('cm', self.metric['cm']))
-                # self.summaries.append(cm_summary(self.metric['cm'], labels=np.arange(self.nclass)))
+
+            for m in ['acc', 'f1', 'pre', 'rec', 'heidke', 'prauc']:
+                self.metric[m], self.metric_op[m] = md[m](
+                    self.discrete_y, 
+                    self.discrete_prediction, 
+                    weights=weights)
+                self.summaries.append(tf.summary.scalar(m, self.metric[m]))
+            self.metric['bss'], self.metric_op['bss'] = md['bss'](
+                    self.y, self.prediction, weights=weights)
+            self.summaries.append(tf.summary.scalar('bss', self.metric['bss']))
 # }}}
 
     def convlstm_layer(self, config, hidden_length, input_channels):
@@ -179,17 +151,14 @@ class Model():
     def discrete_prediction(self):
         prediction_max = tf.argmax(self.prediction, axis=-1)
         return prediction_max
-        # return tf.reshape(prediction_max, [-1])
 
     @lazy_property_with_scope
     def discrete_y(self):
         y_max = tf.argmax(self.y, axis=-1)
         return y_max
-        # return tf.reshape(y_max, [-1])
 
     @lazy_property_with_scope
     def error(self):
-        # train_mse = tf.losses.mean_squared_error(self.y, self.train_prediction)
         weights = tf.reduce_sum(self.y * self.bias, -1)
         err = tf.losses.softmax_cross_entropy(
             self.y, 
@@ -204,7 +173,8 @@ class Model():
         with tf.control_dependencies(update_ops):
             optimizer = tf.train.AdamOptimizer(self.config.learning_rate)
             return optimizer.minimize(self.error)
-
+ 
+    @lazy_property_with_scope
     def prediction(self, x=None, seqlen=None):
 # {{{
         if x is None:
@@ -213,8 +183,7 @@ class Model():
             seqlen = self.seqlen
 
         batch_size = tf.shape(x)[0]
-        # max_time = tf.shape(x)[1]
-        max_time = self.config.dataloader.encode_length # DIFFERENT!
+        max_time = self.config.dataloader.encode_length
 
         squeezed_x = tf.reshape(x, [batch_size * max_time, 64, 64, 2])
 
@@ -248,20 +217,18 @@ class Model():
 
         fc_output = self._fc_block(rnn_output_flat)
 
-        # difference here!
-        assert(len(self.bias) == 2)
         careful_bias = np.log(self.bias[0] / self.bias[1])
         careful_bias_initializer = tf.constant_initializer(careful_bias)
 
         logits = tf.layers.dense(
                 fc_output,
-                self.nclass,
+                2,
                 kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
                 bias_initializer=careful_bias_initializer,
                 kernel_regularizer=tf.contrib.layers.l2_regularizer(self.config.regular_factor),
                 name="prob_positive",
                 )
-        logits = tf.reshape(logits, [batch_size, 1, self.nclass])
+        logits = tf.reshape(logits, [batch_size, 1, 2])
 
         return logits
 # }}}
@@ -273,9 +240,4 @@ class Model():
     @lazy_property_with_scope
     def regularizer_sum(self):
         all_regularizers = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        '''
-        for w in all_regularizers:
-            shp = w.get_shape().as_list()
-            print("- {} shape:{} size:{}".format(w.name, shp, np.prod(shp)))
-        '''
         return sum(all_regularizers)
