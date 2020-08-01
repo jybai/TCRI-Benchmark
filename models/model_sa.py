@@ -52,7 +52,6 @@ class Model(PlainModel):
             lambda: tf.cast(config.keep_prob, tf.float32),
             lambda: 1.0))
         attn = tf.expand_dims(attn, -1)
-        attn = attn * hidden_length * hidden_length
 
         sa_output = attn * sa_input
 
