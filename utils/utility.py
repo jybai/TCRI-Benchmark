@@ -4,6 +4,7 @@ import os
 import time
 import GPUtil
 import functools
+import random
 
 def lazy_property_with_scope(function):
     attribute = '_cache_' + function.__name__
@@ -32,7 +33,6 @@ def seed_everything(seed=1126):
     os.environ['PYTHONHASHSEED']=str(seed)
     tf.set_random_seed(seed)
     np.random.seed(seed)
-    import random
     random.seed(seed)
 
 def prepare_session(mem=None):

@@ -12,7 +12,7 @@ class Dataloader():
         '''
         opts: dict
         data_split: 'train' | 'valid' | 'test'
-        training: tf.dataloader(dtype=tf.bool)
+        training: tf.placeholder(dtype=tf.bool)
         '''
         assert(data_split == 'train' or data_split == 'valid' or data_split == 'test')
         self.threshold = [-np.inf, 35, np.inf]
@@ -72,7 +72,7 @@ class Dataloader():
             threshold = self.threshold
 
         ncopies = seqlen - (el + ed) + 1
-        # tf.shape(img) = [seqlen,  201, 201, 4]
+        # shape=(seqlen,  201, 201, 4)
         rolling = tf.range(ncopies)
         # shape=(seqlen - el)
         crop_img = tf.image.crop_to_bounding_box(img, 54, 54, 93, 93)
