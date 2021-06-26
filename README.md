@@ -7,8 +7,6 @@ Model | vanilla | CCA | SSA | CCA + SSA
 PR-AUC | 0.098 | 0.095 | 0.099 | 0.089
 Heidke skill score | 0.159 | 0.164 | 0.161 | 0.152 
 
-images).
-
 ## Requirements
 You can install the recommended environment as follows:
 ```
