@@ -4,7 +4,7 @@ You can find the code to reproduce all the experiment results, including 4 ablat
 
 Model | vanilla | CCA | SSA | CCA + SSA
 --- | --- | --- | --- | ---
-PR-AUC | 0.098 | 0.095 | 0.099 | 0.089
+PR-AUC | 0.951 | 0.963 | 0.951 | 0.961
 Heidke skill score | 0.159 | 0.164 | 0.161 | 0.152 
 
 ## Requirements
@@ -20,12 +20,25 @@ chmod +x combine.sh
 ```
 
 ## Quick Start
+
+### Data preparation
 The data needs to first be downloaded from [here](https://www.csie.ntu.edu.tw/~htlin/program/TCRISI/).
 The data paths in `config.yaml` needs to then be updated according to the path of the data.
 The config files are located in the specific model directories in `./pretrained_models`.
-Then run
+
+### Train
+To train the model, run
 ```
 python train.py
+```
+### Predict
+To evaluate model performance, run
+```
+python predict.py [pretrained_model_dir] [model_1,model_2,...,model_n]
+```
+For instance to evaluate the pretrained models, run
+```
+python predict.py --model_dir ./pretrained_models --models ConvLSTM,ConvLSTM_CCA,ConvLSTM_SSA,ConvLSTM_CCA_SSA
 ```
 
 ## Citation

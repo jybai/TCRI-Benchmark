@@ -42,12 +42,17 @@ class Model():
             self.summaries = []
             weights = tf.sequence_mask(self.seqlen, maxlen=tf.shape(self.y)[1])
 
-            for m in ['acc', 'f1', 'pre', 'rec', 'heidke', 'prauc']:
+            for m in ['acc', 'f1', 'pre', 'rec', 'heidke']:
                 self.metric[m], self.metric_op[m] = md[m](
                     self.discrete_y, 
                     self.discrete_prediction, 
                     weights=weights)
                 self.summaries.append(tf.summary.scalar(m, self.metric[m]))
+
+            self.metric['prauc'], self.metric_op['prauc'] = md['prauc'](
+                    self.y, tf.nn.softmax(self.prediction), weights=weights)
+            self.summaries.append(tf.summary.scalar('prauc', self.metric['prauc']))
+
             self.metric['bss'], self.metric_op['bss'] = md['bss'](
                     self.y, self.prediction, weights=weights)
             self.summaries.append(tf.summary.scalar('bss', self.metric['bss']))
