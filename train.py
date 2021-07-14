@@ -9,7 +9,6 @@ import sys
 import h5py
 import argparse
 import importlib
-import telegram
 import GPUtil
 import shutil
 from attrdict import AttrDict
@@ -18,12 +17,6 @@ import yaml
 from dataloader import Dataloader
 from utils.metrics import cm_summary
 from utils.utility import mask_gpu, seed_everything, prepare_session
-
-def send_tg_notification(model_name):
-    msg = f"Finish training {model_name}"
-    print(msg)
-    bot = telegram.Bot(token=os.environ["TG_BOT_TOKEN"])
-    bot.send_message(chat_id=os.environ["TG_CHAT_ID"], text=msg)
 
 def main():
     seed_everything()
@@ -142,8 +135,6 @@ def main():
 
                 t = time.strftime("%m/%d %H:%M:%S", time.localtime(time.time()))
                 print(f"{t} epoch: {i:4d}", end='\r', flush=True)
-
-    send_tg_notification(model_name)
 
 if __name__ == '__main__':
     main()

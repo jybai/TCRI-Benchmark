@@ -29,8 +29,10 @@ The config files are located in the specific model directories in `./pretrained_
 ### Train
 To train the model, run
 ```
-python train.py
+python train.py --exp [config.yaml]
 ```
+The default config files can be found in the individual pretrained model directories in `./pretrained_models`.
+
 ### Predict
 To evaluate model performance, run
 ```
