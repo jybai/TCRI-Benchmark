@@ -34,7 +34,7 @@ python train.py
 ### Predict
 To evaluate model performance, run
 ```
-python predict.py [pretrained_model_dir] [model_1,model_2,...,model_n]
+python predict.py --model_dir [pretrained_model_dir] --models [model_1,model_2,...,model_n]
 ```
 For instance to evaluate the pretrained models, run
 ```
